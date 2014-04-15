@@ -2,6 +2,7 @@
 #include "query.h"
 #include "index.h"
 #include <cstring>
+#include <vector>
 /*
  * Inserts a record into the specified relation
  *
@@ -17,6 +18,8 @@ Status Updates::Insert(const string& relation,      // Name of the relation
     /* Your solution goes here */
     int iattrCnt;
     AttrDesc *relattrs;
+    Status status;
+    vector<int> maping; // deal with the uncorrect order
     attrCat->getRelInfo(relation, iattrCnt, relattrs);
 
     if(attrCnt != iattrCnt)
@@ -24,7 +27,7 @@ Status Updates::Insert(const string& relation,      // Name of the relation
 
     std::cout << relation << ' ' << *(int *)(attrList[0].attrValue) << endl;
     std::cout << "GG: " << relattrs[0].relName << endl;
-    std::cout << "L: " << sizeof(attrList[0].attrName) << endl;
+    std::cout << "L: " <<  attrList[0].attrName << MAXNAME <<  endl;
     int totalLen = 0;
     for(int i = 0; i < iattrCnt; i++)
         totalLen += relattrs[i].attrLen;
@@ -36,13 +39,42 @@ Status Updates::Insert(const string& relation,      // Name of the relation
     for(int i = 0; i < iattrCnt; i++)
     {
         int k = 0;
-        for(int k = 0; k < iattrCnt; k++)
+        for(k = 0; k < iattrCnt; k++)
         {
-            if(memcmp(attrList[i].attrName, relattrs[k].attrName, sizeof(relattrs[k].attrName)))
+            if(memcmp(attrList[k].attrName, relattrs[i].attrName, strlen(relattrs[i].attrName))==0)
                 break;
         }
-        cout << k << ' ';
+        maping.push_back(k);
+        memcpy(irecord.data + relattrs[i].attrOffset, attrList[k].attrValue, relattrs[i].attrLen);
     }
+    //init file
+    HeapFile tmpfile(relation, status);
+
+    if(status != OK)
+        error.print(status);
+    RID outRid;
+    status = tmpfile.insertRecord(irecord,outRid);
+
+    if(status != 0)
+        error.print(status);
+
+    //insert record ID into index
+    for(int i = 0; i < iattrCnt; i++)
+    {
+        if(relattrs[i].indexed != 0)
+        {
+            //this attr is indexed
+            Index tmpIndex(relation,relattrs[i].attrOffset,relattrs[i].attrLen,static_cast<Datatype>(relattrs[i].attrType),1,status);
+            if(status != OK)
+                error.print(status);
+
+            tmpIndex.insertEntry(attrList[maping[i]].attrValue,outRid);
+
+        }
+    }
+
+    cout << outRid.pageNo << endl;
+
 
 
     //if no value is specified for an attribute in attriList
