@@ -25,9 +25,6 @@ Status Updates::Insert(const string& relation,      // Name of the relation
     if(attrCnt != iattrCnt)
         ;//number of attr doesnt match
 
-    std::cout << relation << ' ' << *(int *)(attrList[0].attrValue) << endl;
-    std::cout << "GG: " << relattrs[0].relName << endl;
-    std::cout << "L: " <<  attrList[0].attrName << MAXNAME <<  endl;
     int totalLen = 0;
     for(int i = 0; i < iattrCnt; i++)
         totalLen += relattrs[i].attrLen;
@@ -45,7 +42,14 @@ Status Updates::Insert(const string& relation,      // Name of the relation
                 break;
         }
         maping.push_back(k);
-        memcpy(irecord.data + relattrs[i].attrOffset, attrList[k].attrValue, relattrs[i].attrLen);
+        if(attrList[k].attrType == DOUBLE)
+            memcpy(irecord.data + relattrs[i].attrOffset, (double *)attrList[k].attrValue, relattrs[i].attrLen);
+        else if(attrList[k].attrType == INTEGER)
+            memcpy(irecord.data + relattrs[i].attrOffset, (int *)attrList[k].attrValue, relattrs[i].attrLen);
+        else
+        {
+            memcpy(irecord.data + relattrs[i].attrOffset, attrList[k].attrValue, relattrs[i].attrLen+1);
+        }
     }
     //init file
     HeapFile tmpfile(relation, status);
@@ -64,7 +68,7 @@ Status Updates::Insert(const string& relation,      // Name of the relation
         if(relattrs[i].indexed != 0)
         {
             //this attr is indexed
-            Index tmpIndex(relation,relattrs[i].attrOffset,relattrs[i].attrLen,static_cast<Datatype>(relattrs[i].attrType),1,status);
+            Index tmpIndex(relation,relattrs[i].attrOffset,relattrs[i].attrLen,static_cast<Datatype>(relattrs[i].attrType),0,status);
             if(status != OK)
                 error.print(status);
 
@@ -72,10 +76,6 @@ Status Updates::Insert(const string& relation,      // Name of the relation
 
         }
     }
-
-    cout << outRid.pageNo << endl;
-
-
 
     //if no value is specified for an attribute in attriList
     return OK;
