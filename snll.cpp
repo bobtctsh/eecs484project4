@@ -85,7 +85,6 @@ Status Operators::SNL(const string& result,           // Output relation name
                 delete (char *) rec.data;
             }
            // rfile.endScan();
-        }
     }
 
 

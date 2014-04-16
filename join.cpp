@@ -27,10 +27,80 @@ Status Operators::Join(const string& result,           // Name of the output rel
     Status status;
 
     //chhose which algorithn to run
-    int alg;
-    if(op == EQ)
+    int alg;// 0--snl
+            // 1--inl
+            // 2--sml
 
+    if(op != EQ)
+        alg = 0;
+    else
+    {
+        AttrDesc tmpDesc;
+        attrCat->getInfo(attr1->relName,attr1->attrName,tmpDesc);
+        if(tmpDesc.indexed)
+        {
+            alg = 1;
+            //use inl
+            //garentee the second has index
+            const attrInfo *tmp = attr2;
+            attr2 = attr1;
+            attr1 = tmp;
+        }
+        else
+        {
+            attrCat->getInfo(attr2->relName,attr2->attrName,tmpDesc);
+            if(tmpDesc.indexed)
+            {
+                alg = 1;
+                //use inl
+            }
+            else
+            {
+                //equi join, no index, use smj
+                alg = 2;
+            }
+        }
+    }
+    //transform attrinfo to AttrDesc
+    AttrDesc newProjNames[projCnt];
+    //AttrDesc *lattr, *rattr;
+    int offset = 0;
 
+    for(int i = 0; i < projCnt; i++)
+    {
+        AttrDesc tmpDesc;
+        status = attrCat->getInfo(projNames[i].relName,projNames[i].attrName,tmpDesc);
+        if(status != OK)
+            error.print(status);
+        newProjNames[i].indexed = false;
+        newProjNames[i].attrOffset = offset;
+        offset +=tmpDesc.attrLen;
+        newProjNames[i].attrLen = tmpDesc.attrLen;
+        newProjNames[i].attrType = projNames[i].attrType;
+        memcpy(newProjNames[i].relName,projNames[i].relName,strlen(projNames[i].relName)+1);
+        memcpy(newProjNames[i].attrName,projNames[i].attrName,strlen(projNames[i].attrName)+1);
+    }
+    AttrDesc ldesc,rdesc;
+    status = attrCat->getInfo(attr1->relName,attr1->attrName,ldesc);
+    if(status != OK)
+        error.print(status);
+    status = attrCat->getInfo(attr2->relName,attr2->attrName,rdesc);
+    if(status != OK)
+        error.print(status);
+    //lattr = &ldesc;
+    //rattr = &rdesc;
+
+    switch(alg)
+    {
+        case 0: status = SNL(result, projCnt, newProjNames, ldesc, op, rdesc, offset);
+            break;
+        case 1: status = INL(result, projCnt, newProjNames, ldesc, op, rdesc, offset);
+            break;
+        case 2: status = SMJ(result, projCnt, newProjNames, ldesc, op, rdesc, offset);
+            break;
+    }
+    if(status != OK)
+        error.print(status);
 
 	return OK;
 }
