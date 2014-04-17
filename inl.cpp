@@ -75,7 +75,7 @@ Status Operators::INL(const string& result,           // Name of the output rela
             for(int i = 0; i < projCnt; i++)
             {
                 
-                if(memcmp(attrDescArray[i].attrName,attrDesc1.attrName,strlen(attrDesc1.attrName))==0)
+                if(memcmp(attrDescArray[i].relName,attrDesc1.relName,strlen(attrDesc1.relName))==0)
                 {
                     //attr in the first relation
                     AttrDesc tmpDesc;
